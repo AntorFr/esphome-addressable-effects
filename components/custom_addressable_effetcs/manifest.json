@@ -1,0 +1,7 @@
+{
+  "name": "Custom Addressable Effects",
+  "codeowners": ["@AntorFr"],
+  "documentation": "https://github.com/AntorFr/esphome-addressable-effetcs",
+  "requirements": [],
+  "dependencies": ["light"]
+}

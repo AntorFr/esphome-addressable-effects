@@ -8,15 +8,12 @@
 #include "esphome/components/light/addressable_light.h"
 #include "esphome/components/light/addressable_light_effect.h"
 
-//#include "FastLED.h"
-//#include "GradientPalettes.hpp"
-
 namespace esphome {
 namespace light {
 
 class AddressableChristmasEffect : public AddressableLightEffect {
  public:
-  explicit AddressableChristmasEffect(const std::string &name) : AddressableLightEffect(name) {}
+  explicit AddressableChristmasEffect(const char *name) : AddressableLightEffect(name) {}
   void set_bit_size(uint8_t bit_size) { this->bit_size_ = bit_size; }
   void set_blank_size(uint8_t blank_size) { this->blank_size_ = blank_size; }
   void start() override {

@@ -26,10 +26,9 @@ build/
 *.swo
 *~
 
-# Migration (old Arduino library)
+# Migration
 to_migrate/
 
 # Test files
 test.yaml
 test-*.yaml
-secrets.yaml

@@ -8,6 +8,9 @@
 #include "esphome/components/light/addressable_light.h"
 #include "esphome/components/light/addressable_light_effect.h"
 
+//#include "FastLED.h"
+//#include "GradientPalettes.hpp"
+
 namespace esphome {
 namespace light {
 
@@ -47,15 +50,18 @@ class AddressableStarsEffect : public AddressableLightEffect {
           view.set_effect_data((view.get_effect_data()<=254)?view.get_effect_data()+2:0);
         }
     }
+    it.schedule_show();
   }
-  
-  void set_stars_probability(float stars_probability) { this->stars_probability_ = stars_probability * 500; }
-  void set_color(AddressableColorStarsEffectColor color) { this->color_ = Color(color.r, color.g, color.b, color.w); }
+
+  void set_stars_probability(float stars_probability) { this->stars_probability_ = stars_probability; }
+  void set_color(const AddressableColorStarsEffectColor &color) { this->color_ = Color(color.r, color.g, color.b, color.w); }
 
  protected:
-  float stars_probability_{50};
-  Color color_{0, 0, 0, 0};
+  float stars_probability_{0.3};
+  Color color_;
+
 };
+
 
 }  // namespace light
 }  // namespace esphome

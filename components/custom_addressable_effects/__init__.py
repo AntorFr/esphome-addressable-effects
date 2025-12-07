@@ -24,6 +24,13 @@ CONF_COOL_LIKE_INCANDESCENT = "cool_like_incandescent"
 CONF_AUTO_BACKGROUND = "auto_background"
 CONF_PALETTE = "palette"
 
+# ColorTwinkles configuration
+CONF_STARTING_BRIGHTNESS = "starting_brightness"
+CONF_FADE_IN_SPEED = "fade_in_speed"
+CONF_FADE_OUT_SPEED = "fade_out_speed"
+CONF_DENSITY = "density"
+CONF_COLOR_TWINKLES_PALETTE = "palette"
+
 light_ns = cg.esphome_ns.namespace("light")
 AddressableStarsEffect = light_ns.class_("AddressableStarsEffect", AddressableLightEffect)
 
@@ -32,6 +39,7 @@ AddressableColorStarsEffectColor = light_ns.struct("AddressableColorStarsEffectC
 
 AddressableChristmasEffect = light_ns.class_("AddressableChristmasEffect", AddressableLightEffect)
 AddressableTwinkleFoxEffect = light_ns.class_("AddressableTwinkleFoxEffect", AddressableLightEffect)
+AddressableColorTwinklesEffect = light_ns.class_("AddressableColorTwinklesEffect", AddressableLightEffect)
 
 # TwinkleFox palette enum
 TwinkleFoxPaletteType = light_ns.enum("TwinkleFoxPaletteType")
@@ -46,6 +54,19 @@ TWINKLEFOX_PALETTES = {
     "ice_colors": TwinkleFoxPaletteType.PALETTE_ICE_COLORS,
     "fairy_light": TwinkleFoxPaletteType.PALETTE_FAIRY_LIGHT,
     "retro_c9": TwinkleFoxPaletteType.PALETTE_RETRO_C9,
+}
+
+# ColorTwinkles palette enum
+ColorTwinklesPaletteType = light_ns.enum("ColorTwinklesPaletteType")
+COLOR_TWINKLES_PALETTES = {
+    "cloud_colors": ColorTwinklesPaletteType.COLOR_TWINKLES_PALETTE_CLOUD_COLORS,
+    "rainbow_colors": ColorTwinklesPaletteType.COLOR_TWINKLES_PALETTE_RAINBOW_COLORS,
+    "snow_colors": ColorTwinklesPaletteType.COLOR_TWINKLES_PALETTE_SNOW_COLORS,
+    "incandescent": ColorTwinklesPaletteType.COLOR_TWINKLES_PALETTE_INCANDESCENT,
+    "party_colors": ColorTwinklesPaletteType.COLOR_TWINKLES_PALETTE_PARTY_COLORS,
+    "ocean_colors": ColorTwinklesPaletteType.COLOR_TWINKLES_PALETTE_OCEAN_COLORS,
+    "forest_colors": ColorTwinklesPaletteType.COLOR_TWINKLES_PALETTE_FOREST_COLORS,
+    "lava_colors": ColorTwinklesPaletteType.COLOR_TWINKLES_PALETTE_LAVA_COLORS,
 }
 
 
@@ -132,4 +153,26 @@ async def addressable_twinklefox_effect_to_code(config, effect_id):
     g = int(round(color_conf[CONF_GREEN] * 255))
     b = int(round(color_conf[CONF_BLUE] * 255))
     cg.add(var.set_background_color(cg.RawExpression(f"Color({r}, {g}, {b})")))
+    return var
+
+
+@register_addressable_effect(
+    "addressable_color_twinkles",
+    AddressableColorTwinklesEffect,
+    "Color Twinkles",
+    {
+        cv.Optional(CONF_STARTING_BRIGHTNESS, default=64): cv.int_range(min=1, max=255),
+        cv.Optional(CONF_FADE_IN_SPEED, default=32): cv.int_range(min=1, max=255),
+        cv.Optional(CONF_FADE_OUT_SPEED, default=20): cv.int_range(min=1, max=255),
+        cv.Optional(CONF_DENSITY, default=255): cv.int_range(min=1, max=255),
+        cv.Optional(CONF_COLOR_TWINKLES_PALETTE, default="rainbow_colors"): cv.enum(COLOR_TWINKLES_PALETTES, lower=True),
+    },
+)
+async def addressable_color_twinkles_effect_to_code(config, effect_id):
+    var = cg.new_Pvariable(effect_id, config[CONF_NAME])
+    cg.add(var.set_starting_brightness(config[CONF_STARTING_BRIGHTNESS]))
+    cg.add(var.set_fade_in_speed(config[CONF_FADE_IN_SPEED]))
+    cg.add(var.set_fade_out_speed(config[CONF_FADE_OUT_SPEED]))
+    cg.add(var.set_density(config[CONF_DENSITY]))
+    cg.add(var.set_palette(config[CONF_COLOR_TWINKLES_PALETTE]))
     return var

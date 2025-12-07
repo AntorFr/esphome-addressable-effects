@@ -282,6 +282,11 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
     uint8_t g = (color.g * scale) >> 8;
     uint8_t b = (color.b * scale) >> 8;
     
+    // Force to black when very dim to allow pixel to be reused
+    if (r < 4 && g < 4 && b < 4) {
+      return Color::BLACK;
+    }
+    
     return Color(r, g, b);
   }
 

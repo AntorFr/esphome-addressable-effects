@@ -26,6 +26,8 @@ light:
     effects:
       - addressable_twinklefox:
           name: "TwinkleFox"
+      - addressable_color_twinkles:
+          name: "Color Twinkles"
       - addressable_stars:
           name: "Stars"
       - addressable_christmas:
@@ -66,6 +68,33 @@ A twinkling effect inspired by the FastLED TwinkleFox pattern. LEDs randomly twi
 | `ice_colors` | Cool whites and blues |
 | `fairy_light` | Warm white incandescent look |
 | `retro_c9` | Classic C9 Christmas bulb colors |
+
+### Color Twinkles
+
+LEDs twinkle with colors from a selected palette, smoothly fading in and out.
+
+```yaml
+- addressable_color_twinkles:
+    name: "Color Twinkles"
+    palette: rainbow_colors    # Color palette (see below)
+    starting_brightness: 64    # Initial brightness when a twinkle starts (0-255, default: 64)
+    fade_in_speed: 8           # Speed of fade in (0-255, default: 8)
+    fade_out_speed: 4          # Speed of fade out (0-255, default: 4)
+    density: 80                # Probability of new twinkles (0-255, default: 80)
+```
+
+#### Available Palettes
+
+| Palette | Description |
+|---------|-------------|
+| `rainbow_colors` | Full rainbow spectrum (default) |
+| `cloud_colors` | Blues and whites, like clouds |
+| `snow_colors` | Whites and light blues |
+| `incandescent` | Warm incandescent colors |
+| `party_colors` | Vibrant party colors |
+| `ocean_colors` | Ocean blues and greens |
+| `forest_colors` | Forest greens |
+| `lava_colors` | Lava reds and oranges |
 
 ### Stars
 
@@ -163,6 +192,14 @@ light:
           name: "TwinkleFox Fairy"
           palette: fairy_light
           cool_like_incandescent: true
+      - addressable_color_twinkles:
+          name: "Color Twinkles Forest"
+          palette: forest_colors
+      - addressable_color_twinkles:
+          name: "Color Twinkles Lava"
+          palette: lava_colors
+          fade_in_speed: 12
+          fade_out_speed: 6
       - addressable_stars:
           name: "Stars"
           stars_probability: 15%

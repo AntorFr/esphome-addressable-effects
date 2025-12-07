@@ -1,0 +1,35 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+tmp/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ESPHome
+.esphome/
+build/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Migration (old Arduino library)
+to_migrate/
+
+# Test files
+test.yaml
+test-*.yaml
+secrets.yaml

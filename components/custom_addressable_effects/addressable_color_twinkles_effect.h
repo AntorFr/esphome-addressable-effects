@@ -287,9 +287,7 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
       return Color::BLACK;
     }
     
-    // TEST: Force immediate black
-    return Color::BLACK;
-    // return Color(r, g, b);
+    return Color(r, g, b);
   }
 
   bool get_pixel_direction(uint16_t i) {
@@ -326,8 +324,10 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
         Color brighter = make_brighter(current, fade_up_amount);
         it[i] = brighter;
         
-        // Check if we've maxed out the brightness
-        if (brighter.r == 255 || brighter.g == 255 || brighter.b == 255) {
+        // Check if we've maxed out the brightness OR if we're stuck (no change)
+        bool maxed_out = (brighter.r == 255 || brighter.g == 255 || brighter.b == 255);
+        bool stuck = (brighter.r == current.r && brighter.g == current.g && brighter.b == current.b);
+        if (maxed_out || stuck) {
           // Turn around and start getting darker
           set_pixel_direction(i, GETTING_DARKER);
         }

@@ -33,14 +33,22 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
   void set_palette(ColorTwinklesPaletteType palette) { palette_type_ = palette; }
 
   void start() override {
-    // Allocate direction flags (1 bit per LED, packed into bytes)
     auto &it = *this->get_addressable_();
     size_t num_leds = it.size();
+    
+    // Allocate direction flags (1 bit per LED, packed into bytes)
     direction_flags_size_ = (num_leds + 7) / 8;
     direction_flags_ = new uint8_t[direction_flags_size_];
     memset(direction_flags_, 0, direction_flags_size_);
     
-    // Turn off all LEDs at init
+    // Allocate color indices (1 byte per LED for palette index)
+    color_indices_ = new uint8_t[num_leds];
+    memset(color_indices_, 0, num_leds);
+    
+    // Initialize all effect_data to 0 (brightness) and turn off LEDs
+    for (auto view : it) {
+      view.set_effect_data(0);  // brightness = 0
+    }
     it.all() = Color::BLACK;
     it.schedule_show();
     
@@ -52,6 +60,10 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
     if (direction_flags_ != nullptr) {
       delete[] direction_flags_;
       direction_flags_ = nullptr;
+    }
+    if (color_indices_ != nullptr) {
+      delete[] color_indices_;
+      color_indices_ = nullptr;
     }
   }
 
@@ -70,24 +82,61 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
     // Debug log every 1000 frames
     if (frame_count_ % 1000 == 0) {
       ESP_LOGD(TAG_TWINKLES, "=== Frame %lu - LED status ===", frame_count_);
-      for (size_t i = 0; i < num_leds && i < 20; i++) {  // Limit to first 20 LEDs
-        Color c = it[i].get();
+      for (size_t i = 0; i < num_leds && i < 20; i++) {
+        uint8_t brightness = it[i].get_effect_data();
         const char* dir = get_pixel_direction(i) == GETTING_BRIGHTER ? "UP" : "DOWN";
-        ESP_LOGD(TAG_TWINKLES, "LED[%d]: R=%d G=%d B=%d dir=%s", i, c.r, c.g, c.b, dir);
+        ESP_LOGD(TAG_TWINKLES, "LED[%d]: bright=%d color_idx=%d dir=%s", i, brightness, color_indices_[i], dir);
       }
     }
 
-    // Make each pixel brighter or darker, depending on its 'direction' flag
-    brighten_or_darken_each_pixel(it, fade_in_speed_, fade_out_speed_);
+    // Update each pixel brightness and render
+    size_t idx = 0;
+    for (auto view : it) {
+      uint8_t brightness = view.get_effect_data();
+      
+      if (brightness > 0) {
+        if (get_pixel_direction(idx) == GETTING_DARKER) {
+          // Fade down
+          if (brightness > fade_out_speed_) {
+            brightness -= fade_out_speed_;
+          } else {
+            brightness = 0;
+          }
+        } else {
+          // Fade up
+          uint16_t new_bright = brightness + fade_in_speed_;
+          if (new_bright >= 255) {
+            brightness = 255;
+            set_pixel_direction(idx, GETTING_DARKER);  // Start fading down
+          } else {
+            brightness = new_bright;
+          }
+        }
+        
+        view.set_effect_data(brightness);
+        
+        // Render color from palette scaled by brightness
+        if (brightness > 0) {
+          view = color_from_palette(color_indices_[idx], brightness);
+        } else {
+          view = Color::BLACK;
+        }
+      } else {
+        view = Color::BLACK;
+      }
+      
+      idx++;
+    }
 
     // Now consider adding a new random twinkle
     if ((random_uint32() % 256) < density_) {
       uint16_t pos = random_uint32() % num_leds;
-      // Only light up if pixel is currently off (or very dim)
-      if (it[pos].get().is_on() == false || 
-          (it[pos].get_red() < 10 && it[pos].get_green() < 10 && it[pos].get_blue() < 10)) {
-        Color c = color_from_palette(random_uint32() % 256, starting_brightness_);
-        it[pos] = c;
+      uint8_t brightness = it[pos].get_effect_data();
+      
+      // Only light up if pixel is currently off
+      if (brightness == 0) {
+        color_indices_[pos] = random_uint32() % 256;  // Random palette position
+        it[pos].set_effect_data(starting_brightness_);
         set_pixel_direction(pos, GETTING_BRIGHTER);
       }
     }
@@ -275,36 +324,6 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
     return Color(r, g, b);
   }
 
-  Color make_brighter(const Color &color, uint8_t how_much_brighter) {
-    // Add a fraction of the color to itself
-    uint8_t r = color.r + ((color.r * how_much_brighter) >> 8);
-    uint8_t g = color.g + ((color.g * how_much_brighter) >> 8);
-    uint8_t b = color.b + ((color.b * how_much_brighter) >> 8);
-    
-    // Clamp to 255
-    if (r < color.r) r = 255;
-    if (g < color.g) g = 255;
-    if (b < color.b) b = 255;
-    
-    return Color(r, g, b);
-  }
-
-  Color make_darker(const Color &color, uint8_t how_much_darker) {
-    // Subtract a fraction from the color
-    uint8_t scale = 255 - how_much_darker;
-    uint8_t r = (color.r * scale) >> 8;
-    uint8_t g = (color.g * scale) >> 8;
-    uint8_t b = (color.b * scale) >> 8;
-    
-    // Force to black when total brightness is low to allow pixel to be reused
-    // Using higher threshold (50) to ensure pixels eventually go dark
-    if ((uint16_t)r + g + b < 50) {
-      return Color::BLACK;
-    }
-    
-    return Color(r, g, b);
-  }
-
   bool get_pixel_direction(uint16_t i) {
     uint16_t index = i / 8;
     uint8_t bit_num = i & 0x07;
@@ -324,49 +343,15 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
     direction_flags_[index] = value;
   }
 
-  void brighten_or_darken_each_pixel(AddressableLight &it, uint8_t fade_up_amount, uint8_t fade_down_amount) {
-    const size_t num_leds = it.size();
-    
-    for (size_t i = 0; i < num_leds; i++) {
-      Color current = it[i].get();
-      
-      if (get_pixel_direction(i) == GETTING_DARKER) {
-        // This pixel is getting darker
-        Color darker = make_darker(current, fade_down_amount);
-        it[i] = darker;
-      } else {
-        // This pixel is getting brighter
-        Color brighter = make_brighter(current, fade_up_amount);
-        it[i] = brighter;
-        
-        // Debug: log LED 0 every 100 frames to see make_brighter result
-        if (i == 0 && frame_count_ % 100 == 0) {
-          ESP_LOGD(TAG_TWINKLES, "LED0 brighten: before=(%d,%d,%d) after=(%d,%d,%d) fade_up=%d",
-                   current.r, current.g, current.b, brighter.r, brighter.g, brighter.b, fade_up_amount);
-        }
-        
-        // Check if we've maxed out the brightness OR if we're stuck (no change)
-        bool maxed_out = (brighter.r == 255 || brighter.g == 255 || brighter.b == 255);
-        bool stuck = (brighter.r == current.r && brighter.g == current.g && brighter.b == current.b);
-        if (maxed_out || stuck) {
-          // Turn around and start getting darker
-          set_pixel_direction(i, GETTING_DARKER);
-          if (i == 0) {
-            ESP_LOGD(TAG_TWINKLES, "LED0 direction change to DARKER: maxed=%d stuck=%d", maxed_out, stuck);
-          }
-        }
-      }
-    }
-  }
-
   uint8_t starting_brightness_{64};
-  uint8_t fade_in_speed_{32};
-  uint8_t fade_out_speed_{20};
-  uint8_t density_{255};
+  uint8_t fade_in_speed_{8};
+  uint8_t fade_out_speed_{4};
+  uint8_t density_{80};
   ColorTwinklesPaletteType palette_type_{COLOR_TWINKLES_PALETTE_RAINBOW_COLORS};
   
   uint8_t *direction_flags_{nullptr};
   size_t direction_flags_size_{0};
+  uint8_t *color_indices_{nullptr};
   uint32_t last_update_{0};
   uint32_t frame_count_{0};
   

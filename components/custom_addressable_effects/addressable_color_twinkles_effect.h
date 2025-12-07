@@ -2,10 +2,13 @@
 
 #include "esphome/core/component.h"
 #include "esphome/core/helpers.h"
+#include "esphome/core/log.h"
 #include "esphome/components/light/addressable_light_effect.h"
 
 namespace esphome {
 namespace light {
+
+static const char *const TAG_TWINKLES = "color_twinkles";
 
 // Color Twinkles palette types
 enum ColorTwinklesPaletteType {
@@ -60,8 +63,19 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
       return;
     }
     last_update_ = now;
+    frame_count_++;
 
     const size_t num_leds = it.size();
+
+    // Debug log every 1000 frames
+    if (frame_count_ % 1000 == 0) {
+      ESP_LOGD(TAG_TWINKLES, "=== Frame %lu - LED status ===", frame_count_);
+      for (size_t i = 0; i < num_leds && i < 20; i++) {  // Limit to first 20 LEDs
+        Color c = it[i].get();
+        const char* dir = get_pixel_direction(i) == GETTING_BRIGHTER ? "UP" : "DOWN";
+        ESP_LOGD(TAG_TWINKLES, "LED[%d]: R=%d G=%d B=%d dir=%s", i, c.r, c.g, c.b, dir);
+      }
+    }
 
     // Make each pixel brighter or darker, depending on its 'direction' flag
     brighten_or_darken_each_pixel(it, fade_in_speed_, fade_out_speed_);
@@ -345,6 +359,7 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
   uint8_t *direction_flags_{nullptr};
   size_t direction_flags_size_{0};
   uint32_t last_update_{0};
+  uint32_t frame_count_{0};
   
   Color palette_[16];
 };

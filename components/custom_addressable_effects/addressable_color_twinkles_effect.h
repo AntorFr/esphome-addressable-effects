@@ -339,12 +339,21 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
         Color brighter = make_brighter(current, fade_up_amount);
         it[i] = brighter;
         
+        // Debug: log LED 0 every 100 frames to see make_brighter result
+        if (i == 0 && frame_count_ % 100 == 0) {
+          ESP_LOGD(TAG_TWINKLES, "LED0 brighten: before=(%d,%d,%d) after=(%d,%d,%d) fade_up=%d",
+                   current.r, current.g, current.b, brighter.r, brighter.g, brighter.b, fade_up_amount);
+        }
+        
         // Check if we've maxed out the brightness OR if we're stuck (no change)
         bool maxed_out = (brighter.r == 255 || brighter.g == 255 || brighter.b == 255);
         bool stuck = (brighter.r == current.r && brighter.g == current.g && brighter.b == current.b);
         if (maxed_out || stuck) {
           // Turn around and start getting darker
           set_pixel_direction(i, GETTING_DARKER);
+          if (i == 0) {
+            ESP_LOGD(TAG_TWINKLES, "LED0 direction change to DARKER: maxed=%d stuck=%d", maxed_out, stuck);
+          }
         }
       }
     }

@@ -287,7 +287,9 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
       return Color::BLACK;
     }
     
-    return Color(r, g, b);
+    // TEST: Force immediate black
+    return Color::BLACK;
+    // return Color(r, g, b);
   }
 
   bool get_pixel_direction(uint16_t i) {

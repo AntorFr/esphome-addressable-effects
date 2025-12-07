@@ -31,11 +31,15 @@ class AddressableColorTwinklesEffect : public AddressableLightEffect {
 
   void start() override {
     // Allocate direction flags (1 bit per LED, packed into bytes)
-    auto light_state = this->get_addressable_();
-    size_t num_leds = light_state->size();
+    auto &it = *this->get_addressable_();
+    size_t num_leds = it.size();
     direction_flags_size_ = (num_leds + 7) / 8;
     direction_flags_ = new uint8_t[direction_flags_size_];
     memset(direction_flags_, 0, direction_flags_size_);
+    
+    // Turn off all LEDs at init
+    it.all() = Color::BLACK;
+    it.schedule_show();
     
     // Setup palette based on type
     setup_palette();
